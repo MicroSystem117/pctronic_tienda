@@ -1,0 +1,17 @@
+# Dependencias y builds
+node_modules/
+dist/
+build/
+.vite/
+
+# Variables de entorno y secretos (Twelve-Factor App)
+.env
+.env.*
+!.env.example
+
+# Logs y temporales
+*.log
+logs/
+coverage/
+.DS_Store
+uploads/
