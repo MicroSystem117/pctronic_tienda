@@ -18,15 +18,25 @@ interface SvaBannerRow {
 }
 
 export class MariaDbBannerRepository implements BannerRepositoryPort {
-  async listActiveForStore(): Promise<readonly BannerEntity[]> {
-    const rows = (await dbPool.query(
-      `SELECT id, tag, titulo, texto_destacado, subtitulo, imagen_url,
-              texto_boton, enlace_url, color_fondo_inicio, color_fondo_fin,
-              gradiente_angulo, orden
-         FROM banners_carrusel
-        WHERE activo = 1
-        ORDER BY orden ASC, id ASC`,
-    )) as SvaBannerRow[];
+  async listActiveForStore(channel?: string): Promise<readonly BannerEntity[]> {
+    const targetChannel = channel && channel !== 'all' ? channel.trim().toLowerCase() : null;
+    const query =
+      channel === 'all'
+        ? `SELECT id, tag, titulo, texto_destacado, subtitulo, imagen_url,
+                  texto_boton, enlace_url, color_fondo_inicio, color_fondo_fin,
+                  gradiente_angulo, orden
+             FROM banners_carrusel
+            WHERE activo = 1
+            ORDER BY orden ASC, id ASC`
+        : `SELECT id, tag, titulo, texto_destacado, subtitulo, imagen_url,
+                  texto_boton, enlace_url, color_fondo_inicio, color_fondo_fin,
+                  gradiente_angulo, orden
+             FROM banners_carrusel
+            WHERE activo = 1 AND (canal = ? OR canal = 'general' OR canal IS NULL)
+            ORDER BY orden ASC, id ASC`;
+
+    const params = channel === 'all' ? [] : [targetChannel || 'pctronic'];
+    const rows = (await dbPool.query(query, params)) as SvaBannerRow[];
 
     return rows.map((row) => ({
       banner_id: Number(row.id),

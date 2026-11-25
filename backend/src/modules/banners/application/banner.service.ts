@@ -3,7 +3,7 @@ import type { BannerEntity, BannerRepositoryPort } from '../domain/banner.reposi
 export class BannerService {
   constructor(private readonly bannerRepo: BannerRepositoryPort) {}
 
-  listForStore(): Promise<readonly BannerEntity[]> {
-    return this.bannerRepo.listActiveForStore();
+  listForStore(channel?: string): Promise<readonly BannerEntity[]> {
+    return this.bannerRepo.listActiveForStore(channel);
   }
 }

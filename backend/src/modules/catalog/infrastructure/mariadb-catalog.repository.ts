@@ -220,15 +220,23 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
     const cleaned = slug.trim().toLowerCase();
     let matchedId: number | null = null;
 
+    const idSuffixMatch = cleaned.match(/-(\d+)$/);
     if (/^\d+$/.test(cleaned)) {
       matchedId = Number(cleaned);
-    } else {
+    } else if (idSuffixMatch) {
+      matchedId = Number(idSuffixMatch[1]);
+    }
+
+    if (!matchedId) {
       const candidates = (await dbPool.query(
         `SELECT id, codigo, nombre FROM productos WHERE estado = 'activo'`,
       )) as { id: number; codigo: string; nombre: string }[];
 
       const found = candidates.find(
-        (c) => c.codigo.toLowerCase() === cleaned || slugifyText(c.nombre) === cleaned,
+        (c) =>
+          c.codigo.toLowerCase() === cleaned ||
+          slugifyText(c.nombre) === cleaned ||
+          `${slugifyText(c.nombre)}-${c.id}` === cleaned,
       );
       if (found) matchedId = Number(found.id);
     }

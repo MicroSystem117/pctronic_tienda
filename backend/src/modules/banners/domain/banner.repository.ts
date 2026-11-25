@@ -15,5 +15,5 @@ export interface BannerEntity {
 }
 
 export interface BannerRepositoryPort {
-  listActiveForStore(): Promise<readonly BannerEntity[]>;
+  listActiveForStore(channel?: string): Promise<readonly BannerEntity[]>;
 }

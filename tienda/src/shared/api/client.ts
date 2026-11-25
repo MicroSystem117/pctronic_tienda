@@ -144,24 +144,24 @@ export function useRemote<T>(load: () => Promise<T>, fallback: T, deps: readonly
 }
 
 export const DEFAULT_SETTINGS: StoreSettings = {
-  company_name: 'PC TRONIC',
-  company_rif: 'J-41317926-1',
-  company_phone: '+58 414-0000000',
+  company_name: 'PC TRONIC TERMINAL CA',
+  company_rif: 'J-50157662-9',
+  company_phone: '04147694155',
   company_email: 'ventas@pctronic.com.ve',
-  company_address: 'Venezuela',
+  company_address: 'C.C Terminal, Av. Sucre, Ciudad Bolívar',
   free_shipping_threshold: 150,
   free_shipping_enabled: true,
   currency: 'USD',
-  bcv_rate: 88,
-  binance_rate: 95,
+  bcv_rate: 922.56,
+  binance_rate: 1200,
   show_bs_prices: true,
   payment_accounts: {
     pago_movil: {
       enabled: true,
       bank: 'Banesco (0134)',
-      phone: '0414-0000000',
-      document_id: 'J-41317926-1',
-      holder_name: 'PC TRONIC C.A.',
+      phone: '04147694155',
+      document_id: 'J-50157662-9',
+      holder_name: 'PC TRONIC TERMINAL CA',
       instructions: 'Envía el número de referencia junto con la captura.',
     },
     transferencia: {
@@ -169,14 +169,14 @@ export const DEFAULT_SETTINGS: StoreSettings = {
       bank: 'Banesco Banco Universal',
       account_number: '0134-0000-00-0000000000',
       account_type: 'Corriente',
-      document_id: 'J-41317926-1',
-      holder_name: 'PC TRONIC C.A.',
+      document_id: 'J-50157662-9',
+      holder_name: 'PC TRONIC TERMINAL CA',
       instructions: null,
     },
     zelle: {
       enabled: false,
       email: '',
-      holder_name: 'PC TRONIC',
+      holder_name: 'PC TRONIC TERMINAL CA',
       instructions: null,
     },
     binance: {
