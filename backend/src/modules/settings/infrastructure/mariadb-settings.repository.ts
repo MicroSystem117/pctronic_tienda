@@ -29,7 +29,8 @@ export class MariaDbSettingsRepository implements SettingsRepositoryPort {
         'tasa_bcv', 'tasa_binance', 'moneda_principal',
         'pago_movil_banco', 'pago_movil_telefono', 'pago_movil_rif',
         'transf_banco', 'transf_cuenta', 'transf_titular', 'transf_rif',
-        'zelle_email', 'zelle_titular', 'binance_pay_id', 'binance_email'
+        'zelle_email', 'zelle_titular', 'binance_pay_id', 'binance_email',
+        'recargo_cashea', 'recargo_cashea_en_bcv'
       )`,
     )) as ConfigRow[];
 
@@ -117,6 +118,8 @@ export class MariaDbSettingsRepository implements SettingsRepositoryPort {
       bcv_rate: bcvRate,
       binance_rate: binanceRate,
       show_bs_prices: true,
+      cashea_active: Boolean(Number(cfg['recargo_cashea_en_bcv']) === 1),
+      cashea_rate: Number(cfg['recargo_cashea']) || 16.0,
       payment_accounts: paymentAccounts,
     };
   }

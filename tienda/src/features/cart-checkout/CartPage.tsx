@@ -89,6 +89,16 @@ export function CartPage() {
                 <div className="tabular-nums" style={{ fontSize: '1.35rem', fontWeight: 800 }}>
                   {money(selectedTotal, settings.currency)}
                 </div>
+                {settings.show_bs_prices && settings.bcv_rate > 0 && (
+                  <div className="price-bs" style={{ fontSize: '0.88rem' }}>
+                    Bs. {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(selectedTotal * settings.bcv_rate)}
+                  </div>
+                )}
+                {settings.show_bs_prices && settings.bcv_rate > 0 && (
+                  <div className="price-bs" style={{ fontSize: '0.88rem' }}>
+                    Bs. {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(selectedTotal * settings.bcv_rate)}
+                  </div>
+                )}
               </div>
 
               {selectedCount > 0 ? (

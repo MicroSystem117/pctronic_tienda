@@ -47,6 +47,8 @@ export interface StoreSettingsEntity {
   readonly bcv_rate: number;
   readonly binance_rate: number;
   readonly show_bs_prices: boolean;
+  readonly cashea_active: boolean;
+  readonly cashea_rate: number;
   readonly payment_accounts: PaymentAccountsConfig;
 }
 

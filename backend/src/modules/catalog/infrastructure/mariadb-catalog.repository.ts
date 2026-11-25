@@ -46,6 +46,14 @@ interface SvaVariantRow {
   precio_usd: number | null;
 }
 
+interface StorePricingConfig {
+  tasaBcv: number;
+  tasaBinance: number;
+  recargoCashea: number;
+  casheaActive: boolean;
+  factorBrecha: number;
+}
+
 const RESERVED_SUBQUERY = `LEFT JOIN (
   SELECT pd.producto_id, COALESCE(SUM(pd.cantidad), 0) AS reserved_qty
     FROM pedidos_detalles pd
@@ -118,16 +126,19 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
       params.push(catId);
     }
 
+    const pricingConfig = await this.getPricingConfig();
+    const priceMultiplier = pricingConfig.factorBrecha * (pricingConfig.casheaActive ? (1 + pricingConfig.recargoCashea / 100) : 1);
+
     if (query.in_stock) {
       conditions.push('GREATEST(0, p.stock_actual - COALESCE(pending_agg.reserved_qty, 0)) > 0');
     }
     if (query.min_price !== undefined) {
       conditions.push('p.precio_usd >= ?');
-      params.push(query.min_price);
+      params.push(query.min_price / priceMultiplier);
     }
     if (query.max_price !== undefined) {
       conditions.push('p.precio_usd <= ?');
-      params.push(query.max_price);
+      params.push(query.max_price / priceMultiplier);
     }
 
     const whereClause = conditions.join(' AND ');
@@ -177,7 +188,7 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
     }
 
     const searchCounts = await this.fetchSearchCountsMap(productIds);
-    let items = rows.map((r) => this.mapStoreSummary(r, searchCounts.get(Number(r.id)) ?? 0));
+    let items = rows.map((r) => this.mapStoreSummary(r, searchCounts.get(Number(r.id)) ?? 0, pricingConfig));
 
     if (query.sort === 'most_searched' || query.sort === 'popular') {
       items = [...items].sort((a, b) =>
@@ -261,8 +272,9 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
     const row = rows[0];
     if (!row) return null;
 
+    const pricingConfig = await this.getPricingConfig();
     const searchCounts = await this.fetchSearchCountsMap([Number(row.id)]);
-    const summary = this.mapStoreSummary(row, searchCounts.get(Number(row.id)) ?? 0);
+    const summary = this.mapStoreSummary(row, searchCounts.get(Number(row.id)) ?? 0, pricingConfig);
 
     let variants: ProductVariantEntity[] = [];
     try {
@@ -279,7 +291,7 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
         color: v.color,
         stock: Number(v.stock),
         sku: v.sku,
-        price: v.precio_usd !== null ? Number(v.precio_usd) : null,
+        price: v.precio_usd !== null ? this.calculateStorePrice(Number(v.precio_usd), pricingConfig) : null,
       }));
     } catch {
       variants = [];
@@ -367,7 +379,36 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
     }
   }
 
-  private mapStoreSummary(r: SvaProductRow, searchCount: number): StoreProductSummary {
+    private async getPricingConfig(): Promise<StorePricingConfig> {
+    try {
+      const rows = (await dbPool.query(
+        `SELECT clave, valor FROM configuracion WHERE clave IN ('tasa_bcv', 'tasa_binance', 'recargo_cashea', 'recargo_cashea_en_bcv')`,
+      )) as { clave: string; valor: string }[];
+      const map: Record<string, string> = {};
+      for (const r of rows) map[r.clave] = r.valor;
+
+      const tasaBcv = Number(map['tasa_bcv']) || 922.56;
+      const tasaBinance = Number(map['tasa_binance']) || 1107.40;
+      const recargoCashea = Number(map['recargo_cashea']) || 16.0;
+      const casheaActive = Number(map['recargo_cashea_en_bcv']) === 1;
+      const factorBrecha = (tasaBcv > 0 && tasaBinance > 0) ? (tasaBinance / tasaBcv) : 1.0;
+
+      return { tasaBcv, tasaBinance, recargoCashea, casheaActive, factorBrecha };
+    } catch {
+      return { tasaBcv: 922.56, tasaBinance: 1107.40, recargoCashea: 16.0, casheaActive: false, factorBrecha: 1.20 };
+    }
+  }
+
+  private calculateStorePrice(basePriceUsd: number, cfg: StorePricingConfig): number {
+    if (basePriceUsd <= 0) return 0;
+    const precioBcv = Math.round(basePriceUsd * cfg.factorBrecha * 100) / 100;
+    if (cfg.casheaActive && cfg.recargoCashea > 0) {
+      return Math.round(precioBcv * (1 + (cfg.recargoCashea / 100)) * 100) / 100;
+    }
+    return precioBcv;
+  }
+
+  private mapStoreSummary(r: SvaProductRow, searchCount: number, cfg?: StorePricingConfig): StoreProductSummary {
     const stock = Math.max(0, Number(r.stock_actual) - Number(r.reserved_qty ?? 0));
     const soldCount = Number(r.sold_count ?? 0);
     const inStock = stock > 0;
@@ -383,7 +424,7 @@ export class MariaDbCatalogRepository implements CatalogRepositoryPort {
       brand: r.color || null,
       compatibility_or_model: r.talla || null,
       short_description: r.descripcion ? r.descripcion.slice(0, 140) : r.talla || null,
-      price: Number(r.precio_usd),
+      price: cfg ? this.calculateStorePrice(Number(r.precio_usd), cfg) : Number(r.precio_usd),
       compare_at_price: null,
       currency: 'USD',
       stock_quantity: stock,

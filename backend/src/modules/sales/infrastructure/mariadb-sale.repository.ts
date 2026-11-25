@@ -129,6 +129,21 @@ export class MariaDbSaleRepository implements SaleRepositoryPort {
       line_total: number;
     }[] = [];
 
+    const configRows = (await conn.query(
+      `SELECT clave, valor FROM configuracion WHERE clave IN ('tasa_bcv', 'tasa_binance', 'recargo_cashea', 'recargo_cashea_en_bcv')`,
+    )) as { clave: string; valor: string }[];
+    let tasaBcv = 922.56;
+    let tasaBinance = 1107.40;
+    let recargoCashea = 16.0;
+    let casheaActive = false;
+    for (const cr of configRows) {
+      if (cr.clave === 'tasa_bcv') tasaBcv = Number(cr.valor) || 922.56;
+      if (cr.clave === 'tasa_binance') tasaBinance = Number(cr.valor) || 1107.40;
+      if (cr.clave === 'recargo_cashea') recargoCashea = Number(cr.valor) || 16.0;
+      if (cr.clave === 'recargo_cashea_en_bcv') casheaActive = Number(cr.valor) === 1;
+    }
+    const factorBrecha = (tasaBcv > 0 && tasaBinance > 0) ? (tasaBinance / tasaBcv) : 1.0;
+
     let subtotal = 0;
 
     for (const line of sortedLines) {
@@ -155,7 +170,7 @@ export class MariaDbSaleRepository implements SaleRepositoryPort {
       )) as { reserved_qty: number }[];
       const reservedQty = Number(reservedRows[0]?.reserved_qty ?? 0);
 
-      let unitPrice = Number(prod.precio_usd);
+      let rawBasePrice = Number(prod.precio_usd);
       let availableStock = Math.max(0, Number(prod.stock_actual) - reservedQty);
       let talla: string | null = null;
       let color: string | null = null;
@@ -176,8 +191,14 @@ export class MariaDbSaleRepository implements SaleRepositoryPort {
         talla = variant.talla || null;
         color = variant.color || null;
         if (variant.precio_usd !== null && Number(variant.precio_usd) > 0) {
-          unitPrice = Number(variant.precio_usd);
+          rawBasePrice = Number(variant.precio_usd);
         }
+      }
+
+      const pBcv = Math.round(rawBasePrice * factorBrecha * 100) / 100;
+      let unitPrice = pBcv;
+      if (casheaActive && recargoCashea > 0) {
+        unitPrice = Math.round(pBcv * (1 + (recargoCashea / 100)) * 100) / 100;
       }
 
       if (availableStock < line.quantity) {
@@ -201,15 +222,7 @@ export class MariaDbSaleRepository implements SaleRepositoryPort {
       });
     }
 
-    const configRows = (await conn.query(
-      `SELECT clave, valor FROM configuracion WHERE clave IN ('tasa_bcv', 'tasa_binance')`,
-    )) as { clave: string; valor: string }[];
-    let tasaBcv = 88.0;
-    let tasaBinance = 95.0;
-    for (const cr of configRows) {
-      if (cr.clave === 'tasa_bcv') tasaBcv = Number(cr.valor) || 88.0;
-      if (cr.clave === 'tasa_binance') tasaBinance = Number(cr.valor) || 95.0;
-    }
+// Tasas y recargos obtenidos antes del bucle de items
 
     const orderNumber = await this.nextOrderNumber(conn);
     const deliveryCode = String(crypto.randomInt(100000, 999999));

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Heart, ShoppingCart } from 'lucide-react';
-import { resolveMediaUrl, storeApi } from '../../shared/api/client';
+import { resolveMediaUrl, storeApi, useStoreSettings } from '../../shared/api/client';
 import type { ProductDetail, ProductVariant } from '../../shared/api/contracts';
 import { getMockProductDetail } from '../../shared/api/mock-data';
 import { useCart } from '../../shared/cart/CartContext';
@@ -10,6 +10,7 @@ import { money } from '../../shared/ui/molecules/ProductCard';
 
 export function ProductDetailPage() {
   const { slug = '' } = useParams();
+  const { data: settings } = useStoreSettings();
   const { add } = useCart();
   const { has, toggle } = useWishlist();
   const navigate = useNavigate();
@@ -105,10 +106,25 @@ export function ProductDetailPage() {
             </p>
 
             <div style={{ padding: '14px 16px', background: 'var(--color-bg-page)', borderRadius: 10, border: '1px solid var(--color-border)', marginBottom: 16 }}>
-              <p className="price" style={{ fontSize: '1.75rem' }}>
-                {money(activePrice, product.currency)}
-                {product.compare_at_price && <s>{money(product.compare_at_price, product.currency)}</s>}
-              </p>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                <p className="price" style={{ fontSize: '1.75rem', margin: 0 }}>
+                  {money(activePrice, product.currency)}
+                  {product.compare_at_price && <s>{money(product.compare_at_price, product.currency)}</s>}
+                </p>
+                {settings?.show_bs_prices && (settings.bcv_rate ?? 0) > 0 && (
+                  <span className="price-bs" style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                    Bs. {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(activePrice * settings.bcv_rate)}
+                  </span>
+                )}
+              </div>
+              {settings?.cashea_active && (
+                <div style={{ marginTop: 8, fontSize: '0.82rem', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ background: '#FEF3C7', color: '#92400E', fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: 4 }}>
+                    ⚡ CASHEA DISPONIBLE
+                  </span>
+                  <span>Pagando con Cashea a tasa oficial</span>
+                </div>
+              )}
             </div>
 
             {product.description && <p style={{ margin: '0 0 16px', color: 'var(--color-text)' }}>{product.description}</p>}

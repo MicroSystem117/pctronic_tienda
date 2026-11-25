@@ -1,6 +1,6 @@
-import { Heart, ShoppingCart, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Star, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { resolveMediaUrl } from '../../api/client';
+import { resolveMediaUrl, useStoreSettings } from '../../api/client';
 import type { StoreProductSummary } from '../../api/contracts';
 import { useCart } from '../../cart/CartContext';
 import { useWishlist } from '../../cart/WishlistContext';
@@ -27,6 +27,7 @@ function Stars({ value }: { value: number }) {
 
 export function ProductCard({ product }: { product: StoreProductSummary }) {
   const { add } = useCart();
+  const { data: settings } = useStoreSettings();
   const { has, toggle } = useWishlist();
   const wished = has(product.product_id);
   const low = product.in_stock && product.stock_quantity <= 5;
@@ -73,10 +74,36 @@ export function ProductCard({ product }: { product: StoreProductSummary }) {
 
       <div className="prod-card__foot">
         <div className="price-row">
-          <p className="price">
-            {money(product.price, product.currency)}
-            {product.compare_at_price && <s>{money(product.compare_at_price, product.currency)}</s>}
-          </p>
+          <div>
+            <p className="price">
+              {money(product.price, product.currency)}
+              {product.compare_at_price && <s>{money(product.compare_at_price, product.currency)}</s>}
+            </p>
+            {settings?.show_bs_prices && (settings.bcv_rate ?? 0) > 0 && (
+              <p className="price-bs">
+                Bs. {new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(product.price * settings.bcv_rate)}
+              </p>
+            )}
+          </div>
+          {settings?.cashea_active && (
+            <span
+              className="badge"
+              style={{
+                background: '#FEF3C7',
+                color: '#92400E',
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                padding: '2px 6px',
+                borderRadius: 4,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 2,
+              }}
+              title="Disponible con financiamiento Cashea"
+            >
+              <Zap size={10} className="text-warning" /> Cashea
+            </span>
+          )}
         </div>
         <button
           type="button"
